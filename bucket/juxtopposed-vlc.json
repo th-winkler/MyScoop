@@ -1,0 +1,35 @@
+{
+    "version": "4.0.0-beta.4",
+    "description": "Juxtopposed redesign of VLC media player",
+    "homepage": "https://github.com/dsojevic/juxtopposed-vlc",
+    "license": "GPL-2.0-or-later",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/dsojevic/juxtopposed-vlc/releases/download/4.0.0-beta.4/vlc-juxtopposed-4.0.0-beta.4-win64.zip",
+            "hash": "fae2045d2b82b7b2db6b7d77b2322bc227ab4bb2e2822b1b14bc63946d2287fd"
+        }
+    },
+    "extract_dir": "vlc-win64",
+    "bin": "vlc.exe",
+    "shortcuts": [
+        [
+            "vlc.exe",
+            "VLC (Juxtopposed)"
+        ]
+    ],
+    "persist": "portable",
+    "checkver": {
+        "github": "https://github.com/dsojevic/juxtopposed-vlc",
+        "regex": "releases/tag/(?:v)?([\\d.]+-beta\\.[\\d]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/dsojevic/juxtopposed-vlc/releases/download/$version/vlc-juxtopposed-$version-win64.zip",
+                "hash": {
+                    "url": "$url.sha256"
+                }
+            }
+        }
+    }
+}
