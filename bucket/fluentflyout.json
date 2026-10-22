@@ -1,0 +1,47 @@
+{
+    "version": "2.16.0",
+    "description": "Modern Windows flyouts and taskbar widgets (full-featured upstream GitHub build, not Microsoft Store)",
+    "homepage": "https://fluentflyout.com/",
+    "license": "GPL-3.0-only",
+    "url": "https://files.fluentflyout.com/FluentFlyout_2.16.0_x64_Installer.zip",
+    "hash": "dddad6461b483edd1b74e4c9ec7a840551f2a72e685f93985216b9a38446b8e6",
+    "installer": {
+        "script": [
+            "$systemFiles = Join-Path $dir 'SystemFiles'",
+            "$bundles = @(Get-ChildItem -LiteralPath $systemFiles -Filter '*.msixbundle' -File -ErrorAction Stop)",
+            "$certs = @(Get-ChildItem -LiteralPath $systemFiles -Filter '*.cer' -File -ErrorAction Stop)",
+            "if ($bundles.Count -ne 1 -or $certs.Count -ne 1) { throw 'Unexpected FluentFlyout archive layout: expected one .msixbundle and one .cer in SystemFiles.' }",
+            "$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certs[0].FullName)",
+            "$trusted = @(Get-ChildItem 'Cert:\\LocalMachine\\Root', 'Cert:\\CurrentUser\\Root' | Where-Object { $_.Thumbprint -eq $certificate.Thumbprint }).Count -gt 0",
+            "if ($trusted) {",
+            "    Write-Host 'FluentFlyout signing certificate is already trusted; updating MSIX directly.'",
+            "    Add-AppxPackage -Path $bundles[0].FullName -ForceApplicationShutdown -ErrorAction Stop",
+            "} else {",
+            "    Write-Warning 'The upstream signing certificate is not trusted. The official setup may request administrator approval to trust it.'",
+            "    $bootstrap = Join-Path $systemFiles 'Add-AppDevPackage.ps1'",
+            "    if (!(Test-Path -LiteralPath $bootstrap -PathType Leaf)) { throw 'Official Add-AppDevPackage.ps1 was not found.' }",
+            "    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $bootstrap -SkipLoggingTelemetry",
+            "    if ($LASTEXITCODE -ne 0) { throw ('FluentFlyout upstream setup failed with exit code ' + $LASTEXITCODE) }",
+            "}"
+        ]
+    },
+    "uninstaller": {
+        "script": [
+            "$packages = @(Get-AppxPackage -Name '*FluentFlyout*' | Where-Object { [string]$_.SignatureKind -in @('Developer', 'Enterprise') })",
+            "if ($packages.Count -gt 1) { throw 'More than one developer-signed FluentFlyout package was found. Uninstall manually to avoid removing the wrong application.' }",
+            "if ($packages.Count -eq 1) { Remove-AppxPackage -Package $packages[0].PackageFullName -ErrorAction Stop } else { Write-Warning 'No developer-signed FluentFlyout package found; Microsoft Store packages were left untouched.' }"
+        ]
+    },
+    "notes": [
+        "Installs the developer-provided MSIX bundle, not a portable executable; Windows manages the installed app and its settings.",
+        "Initial setup or signing-certificate changes may require interactive administrator consent. Review the certificate carefully: trusting a self-signed root gives it broad trust.",
+        "Close FluentFlyout before updates if Windows reports the app is in use. Do not let the Microsoft Store replace this edition.",
+        "Uninstalling a Windows app package can delete its local app data; back up settings first."
+    ],
+    "checkver": {
+        "github": "https://github.com/unchihugo/FluentFlyout"
+    },
+    "autoupdate": {
+        "url": "https://files.fluentflyout.com/FluentFlyout_$version\u005fx64_Installer.zip"
+    }
+}
