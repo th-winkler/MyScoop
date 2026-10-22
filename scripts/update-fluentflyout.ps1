@@ -53,6 +53,17 @@ if ([string] $manifest.version -eq $version) {
     if ($manifest.url -ne $downloadUrl -or $manifest.hash -ne $publishedSha256) {
         throw 'Existing version has different URL/hash; review upstream release before modifying the manifest.'
     }
+    $changelogNote = "Official release notes: https://github.com/unchihugo/FluentFlyout/releases/tag/$tag"
+    $existingNotes = @($manifest.notes)
+    if ($changelogNote -notin $existingNotes) {
+        $otherNotes = @($existingNotes | Where-Object {
+            $_ -notmatch '^Official release notes: https://github\.com/unchihugo/FluentFlyout/releases/tag/'
+        })
+        $manifest.notes = @($changelogNote) + $otherNotes
+        $json = $manifest | ConvertTo-Json -Depth 30
+        [System.IO.File]::WriteAllText($ManifestPath, "$json`n", [System.Text.UTF8Encoding]::new($false))
+        Write-Host "Added upstream changelog link for $tag."
+    }
     Write-Host "FluentFlyout $version is already current. No download needed."
     return
 }
@@ -78,6 +89,17 @@ try {
         }
     } finally {
         $archive.Dispose()
+    }
+
+    # Keep a direct link to the actual upstream changelog, not installer instructions.
+    $changelogNote = "Official release notes: https://github.com/unchihugo/FluentFlyout/releases/tag/$tag"
+    if ($null -eq $manifest.notes) {
+        $manifest | Add-Member -NotePropertyName notes -NotePropertyValue @($changelogNote)
+    } else {
+        $otherNotes = @($manifest.notes | Where-Object {
+            $_ -notmatch '^Official release notes: https://github\.com/unchihugo/FluentFlyout/releases/tag/'
+        })
+        $manifest.notes = @($changelogNote) + $otherNotes
     }
 
     $manifest.version = $version

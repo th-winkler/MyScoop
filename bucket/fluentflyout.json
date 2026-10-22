@@ -1,8 +1,8 @@
 {
     "version": "2.16.0",
-    "description": "Modern Windows flyouts and taskbar widgets (full-featured upstream GitHub build, not Microsoft Store)",
+    "description": "FluentFlyout is an open-source Windows flyout replacement featuring media controls, volume controls, taskbar widgets, and Fluent 2 styling.",
     "homepage": "https://fluentflyout.com/",
-    "license": "GPL-3.0-only",
+    "license": "GPL-3.0-only"
     "url": "https://files.fluentflyout.com/FluentFlyout_2.16.0_x64_Installer.zip",
     "hash": "dddad6461b483edd1b74e4c9ec7a840551f2a72e685f93985216b9a38446b8e6",
     "installer": {
