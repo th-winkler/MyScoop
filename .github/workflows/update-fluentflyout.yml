@@ -1,34 +1,37 @@
-name: Update FluentFlyout Scoop manifest
-
+name: Update FluentFlyout manifest
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 7 * * *' # Every day, UTC
-
+    - cron: '17 7 * * *'
 permissions:
   contents: write
-
 concurrency:
-  group: fluentflyout-manifest-update
+  group: myscoop-manifest-writes
   cancel-in-progress: false
-
 jobs:
   update:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - name: Check out MyScoop
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: true
-      - name: Update the verified installer manifest
+      - name: Validate all manifests before update
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Verify upstream checksum and refresh FluentFlyout
         shell: pwsh
         run: ./scripts/update-fluentflyout.ps1
-      - name: Commit new version if changed
+      - name: Validate all manifests after update
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Commit only the FluentFlyout manifest
         shell: bash
         run: |
+          set -euo pipefail
+          git diff --check
           if git diff --quiet -- bucket/fluentflyout.json; then
-            echo 'No new upstream version.'
+            echo 'No changes.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'

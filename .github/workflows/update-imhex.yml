@@ -1,0 +1,38 @@
+name: Update ImHex manifest
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 8 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: myscoop-manifest-writes
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - name: Validate bucket
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Check and verify upstream ImHex artifacts
+        shell: pwsh
+        run: ./scripts/update-imhex.ps1
+      - name: Validate bucket after update
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Commit updated manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet -- bucket/imhex.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- bucket/imhex.json
+          git commit -m 'chore(bucket): update imhex'
+          git push

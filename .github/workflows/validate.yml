@@ -1,0 +1,43 @@
+name: Validate Scoop bucket
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  manifests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate every Scoop manifest and PowerShell syntax
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+  spicetify-windows-smoke:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify pinned release ZIP and execute Spicetify CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $m = Get-Content ./bucket/spicetify-cli.json -Raw | ConvertFrom-Json -AsHashtable
+          $asset = $m.architecture['64bit']
+          $zip = Join-Path $env:RUNNER_TEMP 'spicetify-cli.zip'
+          $dir = Join-Path $env:RUNNER_TEMP 'spicetify-cli-test'
+          Invoke-WebRequest -Uri $asset.url -OutFile $zip -TimeoutSec 600
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -cne $asset.hash) { throw "Pinned Spicetify release digest mismatch: $hash" }
+          Expand-Archive -LiteralPath $zip -DestinationPath $dir
+          foreach ($required in @('spicetify.exe', 'css-map.json', 'jsHelper/spicetifyWrapper.js')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $dir $required) -PathType Leaf)) {
+              throw "Missing Spicetify release member: $required"
+            }
+          }
+          $version = & (Join-Path $dir 'spicetify.exe') -v
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch [regex]::Escape([string]$m.version)) {
+            throw "Spicetify version smoke test failed: $version"
+          }
+          Write-Host "Spicetify Windows release verified: $version"

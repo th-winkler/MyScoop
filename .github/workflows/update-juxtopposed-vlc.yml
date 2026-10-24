@@ -1,0 +1,38 @@
+name: Update Juxtopposed VLC manifest
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 8 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: myscoop-manifest-writes
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - name: Validate bucket
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Update from verified prerelease assets and checksums
+        shell: pwsh
+        run: ./scripts/update-juxtopposed-vlc.ps1
+      - name: Validate bucket after update
+        shell: pwsh
+        run: ./scripts/validate-bucket.ps1
+      - name: Commit updated manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet -- bucket/juxtopposed-vlc.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- bucket/juxtopposed-vlc.json
+          git commit -m 'chore(bucket): update juxtopposed-vlc'
+          git push

@@ -1,0 +1,41 @@
+{
+  "version": "2.46.3",
+  "description": "Command-line tool for customizing the Spotify client",
+  "homepage": "https://spicetify.app/",
+  "license": "LGPL-2.1-only",
+  "notes": [
+    "Spotify must be installed and initialized before using Spicetify. Set spotify_path and prefs_path as needed.",
+    "Marketplace is installed separately. After Spotify updates, reapply the official Spicetify patch with: spicetify restore backup apply"
+  ],
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/spicetify/cli/releases/download/v2.46.3/spicetify-2.46.3-windows-x64.zip",
+      "hash": "07ea07bbbfbcb8d333d28e245d560e37b366a62bb8a784a8846bae81fc981dcf"
+    },
+    "32bit": {
+      "url": "https://github.com/spicetify/cli/releases/download/v2.46.3/spicetify-2.46.3-windows-x32.zip",
+      "hash": "bb282201a87353f750d5a4c8ee850cb17c582168100dcf917651ff474ebecd5a"
+    },
+    "arm64": {
+      "url": "https://github.com/spicetify/cli/releases/download/v2.46.3/spicetify-2.46.3-windows-arm64.zip",
+      "hash": "23bc194a0aa1386cbb7d108779fc8492a55628e5329349c1e5ec0e4ac3450c97"
+    }
+  },
+  "bin": "spicetify.exe",
+  "checkver": {
+    "github": "https://github.com/spicetify/cli"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/spicetify/cli/releases/download/v$version/spicetify-$version-windows-x64.zip"
+      },
+      "32bit": {
+        "url": "https://github.com/spicetify/cli/releases/download/v$version/spicetify-$version-windows-x32.zip"
+      },
+      "arm64": {
+        "url": "https://github.com/spicetify/cli/releases/download/v$version/spicetify-$version-windows-arm64.zip"
+      }
+    }
+  }
+}
