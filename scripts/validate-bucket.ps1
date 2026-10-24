@@ -2,7 +2,9 @@
 [CmdletBinding()]
 param([string]$BucketPath = (Join-Path $PSScriptRoot '..' 'bucket'))
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
 $BucketPath = [IO.Path]::GetFullPath($BucketPath)
+if (-not (Test-Path -LiteralPath $BucketPath -PathType Container)) { throw "Bucket directory missing: $BucketPath" }
 $files = @(Get-ChildItem -LiteralPath $BucketPath -Filter '*.json' -File)
 if ($files.Count -eq 0) { throw "No Scoop manifests in $BucketPath" }
 $failures = [Collections.Generic.List[string]]::new()
@@ -37,7 +39,7 @@ foreach ($file in $files) {
     }
 }
 # Parser validation is offline; downloaded scripts are never executed by this test.
-$scripts = @(Get-ChildItem -LiteralPath (Join-Path $BucketPath '..' 'scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue)
+$scripts = @(Get-ChildItem -LiteralPath (Join-Path $BucketPath '..' 'scripts') -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue)
 foreach ($script in $scripts) {
     $tokens = $null
     $errors = $null

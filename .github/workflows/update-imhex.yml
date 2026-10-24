@@ -10,29 +10,82 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
+    env:
+      TARGET_MANIFEST: bucket/imhex.json
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out bucket
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: true
-      - name: Validate bucket
+      - name: Validate current bucket before any mutation
         shell: pwsh
-        run: ./scripts/validate-bucket.ps1
-      - name: Check and verify upstream ImHex artifacts
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          ./scripts/validate-bucket.ps1
+      - name: Verify ImHex stable release ZIPs and compute manifest
         shell: pwsh
-        run: ./scripts/update-imhex.ps1
-      - name: Validate bucket after update
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $logDir = Join-Path $env:RUNNER_TEMP 'myscoop-diagnostics'
+          New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+          Start-Transcript -Path (Join-Path $logDir 'update-imhex.log') -Force | Out-Null
+          try {
+            ./scripts/update-imhex.ps1
+          } finally {
+            Stop-Transcript | Out-Null
+          }
+      - name: Validate updated bucket before any commit
         shell: pwsh
-        run: ./scripts/validate-bucket.ps1
-      - name: Commit updated manifest
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          ./scripts/validate-bucket.ps1
+      - name: Commit only the expected manifest
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
-          if git diff --quiet -- bucket/imhex.json; then exit 0; fi
+          changed="$(git status --porcelain --untracked-files=all)"
+          if [[ -n "$changed" ]]; then
+            while IFS= read -r line; do
+              path="${line:3}"
+              if [[ "$path" != "$TARGET_MANIFEST" ]]; then
+                echo "::error::Unexpected changed file: $path (expected only $TARGET_MANIFEST)"
+                exit 1
+              fi
+            done <<< "$changed"
+          fi
+          if git diff --quiet -- "$TARGET_MANIFEST"; then
+            echo "No manifest change; not committing."
+            exit 0
+          fi
+          git add -- "$TARGET_MANIFEST"
+          git diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- bucket/imhex.json
           git commit -m 'chore(bucket): update imhex'
-          git push
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Publish manifest summary
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path -LiteralPath $env:TARGET_MANIFEST) {
+            $manifest = Get-Content -LiteralPath $env:TARGET_MANIFEST -Raw | ConvertFrom-Json -AsHashtable
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "Current ``$env:TARGET_MANIFEST`` version: ``$($manifest.version)``"
+          }
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: myscoop-imhex-failure-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/myscoop-diagnostics/**
+            bucket/imhex.json

@@ -8,21 +8,29 @@ permissions:
 jobs:
   manifests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v7
-      - name: Validate every Scoop manifest and PowerShell syntax
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate all manifests and PowerShell script syntax
         shell: pwsh
         run: ./scripts/validate-bucket.ps1
+      - name: Regression test GitHub release-array and prerelease selection
+        shell: pwsh
+        run: ./scripts/tests/test-juxtopposed-release.ps1
   spicetify-windows-smoke:
     runs-on: windows-2022
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Verify pinned release ZIP and execute Spicetify CLI
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
           $m = Get-Content ./bucket/spicetify-cli.json -Raw | ConvertFrom-Json -AsHashtable
           $asset = $m.architecture['64bit']
           $zip = Join-Path $env:RUNNER_TEMP 'spicetify-cli.zip'
