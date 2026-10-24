@@ -10,29 +10,105 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 25
+    env:
+      TARGET_MANIFEST: bucket/spicetify-cli.json
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out bucket
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: true
-      - name: Validate bucket
+      - name: Validate current bucket before any mutation
         shell: pwsh
-        run: ./scripts/validate-bucket.ps1
-      - name: Download and verify official Windows release archives
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          ./scripts/validate-bucket.ps1
+      - name: Verify Spicetify release assets and compute manifest
         shell: pwsh
-        run: ./scripts/update-spicetify.ps1
-      - name: Validate bucket after update
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $logDir = Join-Path $env:RUNNER_TEMP 'myscoop-diagnostics'
+          New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+          Start-Transcript -Path (Join-Path $logDir 'update-spicetify.log') -Force | Out-Null
+          try {
+            ./scripts/update-spicetify.ps1
+          } finally {
+            Stop-Transcript | Out-Null
+          }
+      - name: Validate updated bucket before any commit
         shell: pwsh
-        run: ./scripts/validate-bucket.ps1
-      - name: Commit updated manifest
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          ./scripts/validate-bucket.ps1
+      - name: Smoke-test the new Spicetify binary on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $manifest = Get-Content -LiteralPath $env:TARGET_MANIFEST -Raw | ConvertFrom-Json -AsHashtable
+          $asset = $manifest.architecture['64bit']
+          $archive = Join-Path $env:RUNNER_TEMP 'myscoop-spicetify-smoke.zip'
+          $extract = Join-Path $env:RUNNER_TEMP 'myscoop-spicetify-smoke'
+          Invoke-WebRequest -Uri $asset.url -OutFile $archive -TimeoutSec 600
+          $sha = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -cne $asset.hash) { throw 'Smoke-test archive hash disagrees with the manifest.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath $extract
+          foreach ($required in @('spicetify.exe', 'css-map.json', 'jsHelper/spicetifyWrapper.js')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $extract $required) -PathType Leaf)) {
+              throw "Smoke-test release member missing: $required"
+            }
+          }
+          $version = & (Join-Path $extract 'spicetify.exe') -v
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch [regex]::Escape([string]$manifest.version)) {
+            throw "Spicetify smoke-test failed: $version"
+          }
+          Write-Host "Spicetify binary smoke-test passed: $version"
+      - name: Commit only the expected manifest
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
-          if git diff --quiet -- bucket/spicetify-cli.json; then exit 0; fi
+          changed="$(git status --porcelain --untracked-files=all)"
+          if [[ -n "$changed" ]]; then
+            while IFS= read -r line; do
+              path="${line:3}"
+              if [[ "$path" != "$TARGET_MANIFEST" ]]; then
+                echo "::error::Unexpected changed file: $path (expected only $TARGET_MANIFEST)"
+                exit 1
+              fi
+            done <<< "$changed"
+          fi
+          if git diff --quiet -- "$TARGET_MANIFEST"; then
+            echo "No manifest change; not committing."
+            exit 0
+          fi
+          git add -- "$TARGET_MANIFEST"
+          git diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- bucket/spicetify-cli.json
           git commit -m 'chore(bucket): update spicetify-cli'
-          git push
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Publish manifest summary
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path -LiteralPath $env:TARGET_MANIFEST) {
+            $manifest = Get-Content -LiteralPath $env:TARGET_MANIFEST -Raw | ConvertFrom-Json -AsHashtable
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "Current ``$env:TARGET_MANIFEST`` version: ``$($manifest.version)``"
+          }
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: myscoop-spicetify-failure-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/myscoop-diagnostics/**
+            bucket/spicetify-cli.json
