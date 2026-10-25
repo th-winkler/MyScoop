@@ -13,15 +13,23 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $ProgressPreference = 'SilentlyContinue'
+$apiUrl = 'https://api.github.com/repos/spicetify/cli/releases/latest'
+
+$headers = @{
+    'Accept'               = 'application/vnd.github+json'
+    'User-Agent'            = 'MyScoop-Spicetify-Updater'
+    'X-GitHub-Api-Version'  = '2022-11-28'
+}
+
+if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+    $headers['Authorization'] = "Bearer $env:GITHUB_TOKEN"
+}
+
 $ManifestPath = [IO.Path]::GetFullPath($ManifestPath)
 if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "Manifest not found: $ManifestPath" }
-$headers = @{
-    Accept = 'application/vnd.github+json'
-    'User-Agent' = 'MyScoop-Spicetify-Updater'
-    'X-GitHub-Api-Version' = '2022-11-28'
-}
+
 try {
-    $release = Invoke-RestMethod 'https://api.github.com/repos/spicetify/cli/releases/latest' -Headers $headers -TimeoutSec 60
+    $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers -TimeoutSec 60 -ErrorAction Stop
 } catch {
     throw "GitHub stable release API failed: $($_.Exception.Message)"
 }
