@@ -47,16 +47,22 @@ foreach ($key in @('url','hash')) {
 $current = ConvertTo-JuxtopposedReleaseVersion -Tag ([string]$manifest.version)
 if ($null -eq $current) { throw "Unsupported current VLC version: $($manifest.version)" }
 
+$apiUrl = 'https://api.github.com/repos/dsojevic/juxtopposed-vlc/releases?per_page=30'
+
 $headers = @{
-    Accept = 'application/vnd.github+json'
-    'User-Agent' = 'MyScoop-Juxtopposed-VLC-Updater'
-    'X-GitHub-Api-Version' = '2022-11-28'
+    'Accept'               = 'application/vnd.github+json'
+    'User-Agent'            = 'MyScoop-Juxtopposed-VLC-Updater'
+    'X-GitHub-Api-Version'  = '2022-11-28'
 }
-$api = 'https://api.github.com/repos/dsojevic/juxtopposed-vlc/releases?per_page=30'
+
+if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+    $headers['Authorization'] = "Bearer $env:GITHUB_TOKEN"
+}
+
 try {
-    $payload = Invoke-RestMethod -Uri $api -Headers $headers -TimeoutSec 60
+    $payload = Invoke-RestMethod -Uri $apiUrl -Headers $headers -TimeoutSec 60 -ErrorAction Stop
 } catch {
-    throw "GitHub releases API request failed ($api): $($_.Exception.Message)"
+    throw "GitHub releases API request failed ($apiUrl): $($_.Exception.Message)"
 }
 # IMPORTANT: Invoke-RestMethod returns a top-level JSON array as one pipeline
 # object. Do not use @(Invoke-RestMethod ...), which can nest the array.
@@ -96,11 +102,11 @@ if ([string]$sumAssets[0].browser_download_url -cne $expectedSumURL) {
 }
 try {
     $sumBytes = (Invoke-WebRequest -Uri $expectedSumURL -TimeoutSec 90).Content
-$sumText = if ($sumBytes -is [byte[]]) {
-    [Text.Encoding]::UTF8.GetString($sumBytes)
-} else {
-    [string]$sumBytes
-}
+    $sumText = if ($sumBytes -is [byte[]]) {
+        [Text.Encoding]::UTF8.GetString($sumBytes)
+    } else {
+        [string]$sumBytes
+    }
 } catch {
     throw "Failed to fetch SHA256SUMS.txt: $($_.Exception.Message)"
 }

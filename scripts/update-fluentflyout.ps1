@@ -17,13 +17,22 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $apiUrl = 'https://api.github.com/repos/unchihugo/FluentFlyout/releases/latest'
+
 $headers = @{
-    'Accept' = 'application/vnd.github+json'
-    'User-Agent' = 'MyScoop-FluentFlyout-Updater'
-    'X-GitHub-Api-Version' = '2022-11-28'
+    'Accept'               = 'application/vnd.github+json'
+    'User-Agent'            = 'MyScoop-FluentFlyout-Updater'
+    'X-GitHub-Api-Version'  = '2022-11-28'
 }
 
-$release = Invoke-RestMethod -Uri $apiUrl -Headers $headers -TimeoutSec 45
+if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+    $headers['Authorization'] = "Bearer $env:GITHUB_TOKEN"
+}
+
+$release = Invoke-RestMethod `
+    -Uri $apiUrl `
+    -Headers $headers `
+    -TimeoutSec 45 `
+    -ErrorAction Stop
 $tag = [string] $release.tag_name
 if ($tag -cmatch '^v(?<version>\d+(?:\.\d+){1,3})$') {
     $version = $Matches.version

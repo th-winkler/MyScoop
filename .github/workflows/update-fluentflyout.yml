@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
+      GITHUB_TOKEN: ${{ github.token }}
       TARGET_MANIFEST: bucket/fluentflyout.json
     steps:
       - name: Check out bucket
