@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      GITHUB_TOKEN: ${{ github.token }}
       TARGET_MANIFEST: bucket/fluentflyout.json
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Check out bucket
         uses: actions/checkout@v7.0.1
@@ -27,6 +27,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           Set-StrictMode -Version Latest
           ./scripts/validate-bucket.ps1
+      - name: Test FluentFlyout checksum parser offline
+        shell: pwsh
+        run: ./scripts/tests/test-fluentflyout-release.ps1
       - name: Validate verified FluentFlyout release and generate manifest
         shell: pwsh
         run: |
