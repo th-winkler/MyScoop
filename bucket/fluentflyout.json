@@ -33,6 +33,7 @@
     ]
   },
   "notes": [
+    "Official release notes: https://github.com/unchihugo/FluentFlyout/releases/tag/v2.16.0",
     "Installs the developer-provided MSIX bundle, not a portable executable; Windows manages the installed app and its settings.",
     "Initial setup or signing-certificate changes may require interactive administrator consent. Review the certificate carefully: trusting a self-signed root gives it broad trust.",
     "Close FluentFlyout before updates if Windows reports the app is in use. Do not let the Microsoft Store replace this edition.",
@@ -42,6 +43,6 @@
     "github": "https://github.com/unchihugo/FluentFlyout"
   },
   "autoupdate": {
-    "url": "https://files.fluentflyout.com/FluentFlyout_$version\u005fx64_Installer.zip"
+    "url": "https://files.fluentflyout.com/FluentFlyout_$version_x64_Installer.zip"
   }
 }
