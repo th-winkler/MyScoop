@@ -144,21 +144,7 @@ try {
     Invoke-FluentFlyoutRequest -Description "FluentFlyout download $archiveName" -Operation {
         # Remove partially written content before another attempt.
         Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
-
-        $curlBin = if ($IsLinux -or $IsMacOS) { 'curl' } else { 'curl.exe' }
-        & $curlBin --fail --location --silent --show-error --http2 `
-            --max-time 600 --max-redirs 5 `
-            -A $downloadHeaders['User-Agent'] `
-            -e $downloadHeaders['Referer'] `
-            -H "Accept: $($downloadHeaders['Accept'])" `
-            -H "Accept-Language: $($downloadHeaders['Accept-Language'])" `
-            -o $tempFile `
-            $downloadUrl
-
-        if ($LASTEXITCODE -ne 0) {
-            Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
-            Invoke-WebRequest -Uri $downloadUrl -Headers $downloadHeaders -OutFile $tempFile -TimeoutSec 600 -MaximumRedirection 5 -ErrorAction Stop
-        }
+        Invoke-WebRequest -Uri $downloadUrl -Headers $downloadHeaders -OutFile $tempFile -TimeoutSec 600 -MaximumRedirection 5 -ErrorAction Stop
     } | Out-Null
 
     $actualSha256 = (Get-FileHash -LiteralPath $tempFile -Algorithm SHA256).Hash.ToLowerInvariant()
