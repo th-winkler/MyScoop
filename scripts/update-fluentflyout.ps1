@@ -74,7 +74,7 @@ function Write-FluentFlyoutManifest {
 
 $apiUrl = 'https://api.github.com/repos/unchihugo/FluentFlyout/releases/latest'
 $headers = @{
-    'Accept'              = 'application/vnd.github+json'
+    'Accept'               = 'application/vnd.github+json'
     'User-Agent'           = 'MyScoop-FluentFlyout-Updater'
     'X-GitHub-Api-Version' = '2022-11-28'
 }
@@ -129,6 +129,14 @@ if ([string] $manifest.version -eq $version) {
     return
 }
 
+# Browser headers to pass Cloudflare checks on files.fluentflyout.com
+$downloadHeaders = @{
+    'User-Agent'      = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    'Referer'         = 'https://fluentflyout.com/'
+    'Accept'          = 'application/octet-stream,application/zip,*/*;q=0.8'
+    'Accept-Language' = 'en-US,en;q=0.9'
+}
+
 # Before publishing any new version, validate both upstream checksum and ZIP layout.
 $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N') + '.zip')
 try {
@@ -136,7 +144,21 @@ try {
     Invoke-FluentFlyoutRequest -Description "FluentFlyout download $archiveName" -Operation {
         # Remove partially written content before another attempt.
         Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempFile -TimeoutSec 600 -MaximumRedirection 5 -ErrorAction Stop
+
+        $curlBin = if ($IsLinux -or $IsMacOS) { 'curl' } else { 'curl.exe' }
+        & $curlBin --fail --location --silent --show-error --http2 `
+            --max-time 600 --max-redirs 5 `
+            -A $downloadHeaders['User-Agent'] `
+            -e $downloadHeaders['Referer'] `
+            -H "Accept: $($downloadHeaders['Accept'])" `
+            -H "Accept-Language: $($downloadHeaders['Accept-Language'])" `
+            -o $tempFile `
+            $downloadUrl
+
+        if ($LASTEXITCODE -ne 0) {
+            Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+            Invoke-WebRequest -Uri $downloadUrl -Headers $downloadHeaders -OutFile $tempFile -TimeoutSec 600 -MaximumRedirection 5 -ErrorAction Stop
+        }
     } | Out-Null
 
     $actualSha256 = (Get-FileHash -LiteralPath $tempFile -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -179,4 +201,3 @@ try {
 } finally {
     Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
 }
-
