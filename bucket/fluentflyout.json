@@ -1,10 +1,10 @@
 {
-  "version": "2.16.0",
+  "version": "2.16.1",
   "description": "FluentFlyout is an open-source Windows flyout replacement featuring media controls, volume controls, taskbar widgets, and Fluent 2 styling.",
   "homepage": "https://fluentflyout.com/",
   "license": "GPL-3.0-only",
-  "url": "https://files.fluentflyout.com/FluentFlyout_2.16.0_x64_Installer.zip",
-  "hash": "dddad6461b483edd1b74e4c9ec7a840551f2a72e685f93985216b9a38446b8e6",
+  "url": "https://files.fluentflyout.com/FluentFlyout_2.16.1_x64_Installer.zip",
+  "hash": "5e89f346336d1f16a93f9a857c30e478a5f382611527a2c7e6727d02fe181799",
   "installer": {
     "script": [
       "$systemFiles = Join-Path $dir 'SystemFiles'",
@@ -33,7 +33,7 @@
     ]
   },
   "notes": [
-    "Official release notes: https://github.com/unchihugo/FluentFlyout/releases/tag/v2.16.0",
+    "Official release notes: https://github.com/unchihugo/FluentFlyout/releases/tag/v2.16.1",
     "Installs the developer-provided MSIX bundle, not a portable executable; Windows manages the installed app and its settings.",
     "Initial setup or signing-certificate changes may require interactive administrator consent. Review the certificate carefully: trusting a self-signed root gives it broad trust.",
     "Close FluentFlyout before updates if Windows reports the app is in use. Do not let the Microsoft Store replace this edition.",
