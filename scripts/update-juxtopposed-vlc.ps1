@@ -47,7 +47,8 @@ foreach ($key in @('url','hash')) {
 $current = ConvertTo-JuxtopposedReleaseVersion -Tag ([string]$manifest.version)
 if ($null -eq $current) { throw "Unsupported current VLC version: $($manifest.version)" }
 
-$apiUrl = 'https://api.github.com/repos/dsojevic/juxtopposed-vlc/releases?per_page=30'
+# Updated API URL for hakone-org/hakone
+$apiUrl = 'https://api.github.com/repos/hakone-org/hakone/releases?per_page=30'
 
 $headers = @{
     'Accept'               = 'application/vnd.github+json'
@@ -64,8 +65,7 @@ try {
 } catch {
     throw "GitHub releases API request failed ($apiUrl): $($_.Exception.Message)"
 }
-# IMPORTANT: Invoke-RestMethod returns a top-level JSON array as one pipeline
-# object. Do not use @(Invoke-RestMethod ...), which can nest the array.
+
 $releases = Assert-JuxtopposedReleaseArray -Payload $payload
 Write-Host "GitHub returned $($releases.Length) release(s): $(($releases | ForEach-Object { $_.tag_name }) -join ', ')"
 $latest = Select-JuxtopposedPublishedRelease -Releases $releases
@@ -81,7 +81,9 @@ $asset = $assets[0]
 $digestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<digest>[a-fA-F0-9]{64})$')
 if (-not $digestMatch.Success) { throw "Missing/invalid upstream SHA-256 digest for $name" }
 $expected = $digestMatch.Groups['digest'].Value.ToLowerInvariant()
-$url = "https://github.com/dsojevic/juxtopposed-vlc/releases/download/$tag/$name"
+
+# Updated download URL for hakone-org/hakone
+$url = "https://github.com/hakone-org/hakone/releases/download/$tag/$name"
 if ([string]$asset.browser_download_url -cne $url) {
     throw "Upstream release asset URL differs from expected value for $name"
 }
@@ -96,7 +98,9 @@ if ($manifest.version -eq $tag) {
 
 $sumAssets = @($latest.Release.assets | Where-Object { $_.name -ceq 'SHA256SUMS.txt' -and $_.state -eq 'uploaded' })
 if ($sumAssets.Count -ne 1) { throw 'Required upstream SHA256SUMS.txt asset is missing/duplicated.' }
-$expectedSumURL = "https://github.com/dsojevic/juxtopposed-vlc/releases/download/$tag/SHA256SUMS.txt"
+
+# Updated SHA256SUMS URL for hakone-org/hakone
+$expectedSumURL = "https://github.com/hakone-org/hakone/releases/download/$tag/SHA256SUMS.txt"
 if ([string]$sumAssets[0].browser_download_url -cne $expectedSumURL) {
     throw 'Unexpected SHA256SUMS.txt URL from GitHub releases API.'
 }
@@ -152,8 +156,6 @@ try {
         return
     }
 
-    # Same-directory staging. File.Replace atomically replaces the old manifest,
-    # maintaining a rollback copy until post-write verification succeeds.
     $nonce = [guid]::NewGuid().ToString('N')
     $staging = "$ManifestPath.$nonce.tmp"
     $rollback = "$ManifestPath.$nonce.rollback"

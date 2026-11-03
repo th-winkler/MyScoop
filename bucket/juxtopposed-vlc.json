@@ -1,11 +1,11 @@
 {
   "version": "4.0.0-beta.5",
   "description": "Juxtopposed redesign of VLC media player (experimental prerelease)",
-  "homepage": "https://github.com/dsojevic/juxtopposed-vlc",
+  "homepage": "https://github.com/hakone-org/hakone",
   "license": "GPL-2.0-or-later",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/dsojevic/juxtopposed-vlc/releases/download/4.0.0-beta.5/vlc-juxtopposed-4.0.0-beta.5-win64.zip",
+      "url": "https://github.com/hakone-org/hakone/releases/download/4.0.0-beta.5/vlc-juxtopposed-4.0.0-beta.5-win64.zip",
       "hash": "376ab0b5e2cbd1fca1894f08bed3ead733d70fae02b8f2f19be0cf56326380a5"
     }
   },
@@ -19,13 +19,13 @@
   ],
   "persist": "portable",
   "checkver": {
-    "url": "https://github.com/dsojevic/juxtopposed-vlc/releases",
+    "url": "https://github.com/hakone-org/hakone/releases",
     "regex": "releases/tag/((?:\\d+\\.){2}\\d+(?:-beta\\.\\d+)?)"
   },
   "autoupdate": {
     "architecture": {
       "64bit": {
-        "url": "https://github.com/dsojevic/juxtopposed-vlc/releases/download/$version/vlc-juxtopposed-$version-win64.zip"
+        "url": "https://github.com/hakone-org/hakone/releases/download/$version/vlc-juxtopposed-$version-win64.zip"
       }
     }
   }
